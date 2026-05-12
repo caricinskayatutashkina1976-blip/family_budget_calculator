@@ -3,7 +3,8 @@
 <head>
   <!-- Кодировка и масштаб для корректного отображения на телефонах -->
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- viewport-fit=cover — учёт выреза экрана (iPhone); для GitHub Pages достаточно одного index.html -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Калькулятор семейного бюджета</title>
   <!-- Сразу ставим data-theme из localStorage, чтобы не мигала светлая тема при загрузке -->
   <script>
@@ -81,6 +82,16 @@
       --deficit-bg: #fee2e2;
       --deficit-text: #991b1b;
       --deficit-border: #fca5a5;
+
+      --analysis-title: #475569;
+      --analysis-bar-border: rgba(15, 23, 42, 0.12);
+      --zone-green-track: rgba(34, 197, 94, 0.22);
+      --zone-yellow-track: rgba(234, 179, 8, 0.28);
+      --analysis-labels: #64748b;
+      --analysis-caption: #334155;
+      --analysis-reco-bg: #f8fafc;
+      --analysis-reco-border: #e2e8f0;
+      --analysis-reco-text: #1e293b;
     }
 
     html[data-theme="dark"] {
@@ -140,6 +151,16 @@
       --deficit-bg: rgba(248, 113, 113, 0.15);
       --deficit-text: #fca5a5;
       --deficit-border: rgba(248, 113, 113, 0.45);
+
+      --analysis-title: #94a3b8;
+      --analysis-bar-border: rgba(148, 163, 184, 0.25);
+      --zone-green-track: rgba(52, 211, 153, 0.18);
+      --zone-yellow-track: rgba(250, 204, 21, 0.22);
+      --analysis-labels: #64748b;
+      --analysis-caption: #cbd5e1;
+      --analysis-reco-bg: #0f172a;
+      --analysis-reco-border: #334155;
+      --analysis-reco-text: #e2e8f0;
     }
 
     /*
@@ -159,12 +180,19 @@
     body {
       margin: 0;
       min-height: 100vh;
+      min-height: 100dvh;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background: var(--body-bg);
       color: var(--text);
       line-height: 1.5;
-      padding: 3.75rem 1.25rem 1.25rem;
+      /* Отступ сверху под фиксированную кнопку темы + safe-area для «чёлки» и жестов снизу */
+      padding-top: max(3.75rem, calc(env(safe-area-inset-top, 0px) + 2.75rem));
+      padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+      padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+      padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
       transition: var(--transition-theme);
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
     }
 
     /*
@@ -173,8 +201,8 @@
     */
     .btn-theme {
       position: fixed;
-      top: 1rem;
-      right: 1rem;
+      top: max(0.75rem, env(safe-area-inset-top, 0px));
+      right: max(0.75rem, env(safe-area-inset-right, 0px));
       z-index: 100;
       padding: 0.55rem 0.9rem;
       font-size: 0.875rem;
@@ -201,6 +229,13 @@
     .wrap {
       max-width: 520px;
       margin: 0 auto;
+      padding: 0 0.25rem;
+    }
+
+    @media (min-width: 400px) {
+      .wrap {
+        padding: 0;
+      }
     }
 
     /* Заголовок страницы */
@@ -271,8 +306,9 @@
     /* Поля ввода чисел */
     .field input {
       width: 100%;
+      max-width: 100%;
       padding: 0.65rem 0.85rem;
-      font-size: 1rem;
+      font-size: 16px;
       border: 1px solid var(--input-border);
       border-radius: 10px;
       background: var(--input-bg);
@@ -298,6 +334,7 @@
     .actions button {
       flex: 1;
       min-width: 140px;
+      min-height: 2.75rem;
       padding: 0.75rem 1rem;
       font-size: 1rem;
       font-weight: 600;
@@ -375,6 +412,7 @@
       color: var(--hero-amount);
       line-height: 1.2;
       transition: color 0.35s ease;
+      overflow-wrap: anywhere;
     }
 
     /* Положительный / отрицательный остаток — цвета из переменных для читаемости в обеих темах */
@@ -418,6 +456,209 @@
       font-weight: 700;
       color: var(--stat-value);
       transition: var(--transition-theme);
+      overflow-wrap: anywhere;
+    }
+
+    /*
+      === БЛОК АНАЛИЗА «РАСХОДЫ ОТ ДОХОДА» ===
+      Подложка трека: зелёная зона 0–70%, жёлтая 70–100% (доля ширины полосы).
+      Поверх — заливка фактической доли расходов (цвет зависит от зоны).
+    */
+    .expense-analysis {
+      margin-top: 1.15rem;
+      padding: 1rem 1rem 0.9rem;
+      border-radius: 12px;
+      border: 1px solid var(--stat-border);
+      background: var(--stat-bg);
+      transition: var(--transition-theme);
+    }
+
+    .expense-analysis-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--analysis-title);
+      margin: 0 0 0.65rem;
+    }
+
+    .analysis-bar-track {
+      position: relative;
+      height: 16px;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--analysis-bar-border);
+      /* Фон трека показывает «норму»: зелёный коридор до 70%, затем жёлтый до 100% */
+      background: linear-gradient(
+        to right,
+        var(--zone-green-track) 0%,
+        var(--zone-green-track) 70%,
+        var(--zone-yellow-track) 70%,
+        var(--zone-yellow-track) 100%
+      );
+    }
+
+    .analysis-bar-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      border-radius: 999px;
+      transition: width 0.55s cubic-bezier(0.33, 1, 0.68, 1), background 0.35s ease, box-shadow 0.35s ease;
+    }
+
+    .analysis-bar-fill.zone-green {
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+      box-shadow: 0 1px 4px rgba(22, 163, 74, 0.35);
+    }
+
+    .analysis-bar-fill.zone-yellow {
+      background: linear-gradient(90deg, #eab308, #ca8a04);
+      box-shadow: 0 1px 4px rgba(202, 138, 4, 0.35);
+    }
+
+    .analysis-bar-fill.zone-red {
+      background: linear-gradient(90deg, #ef4444, #dc2626);
+      box-shadow: 0 1px 6px rgba(220, 38, 38, 0.45);
+    }
+
+    .analysis-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.35rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--analysis-labels);
+      letter-spacing: 0.02em;
+    }
+
+    .analysis-caption {
+      margin: 0.75rem 0 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--analysis-caption);
+      line-height: 1.4;
+    }
+
+    .analysis-recommendation {
+      margin: 0;
+      padding: 0.75rem 0.85rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      line-height: 1.45;
+      color: var(--analysis-reco-text);
+      background: var(--analysis-reco-bg);
+      border: 1px solid var(--analysis-reco-border);
+      border-radius: 10px;
+      transition: var(--transition-theme);
+    }
+
+    /*
+      === СТРУКТУРА РАСХОДОВ ===
+      Группы с цветной полосой слева и подсказкой, из каких полей формы сложена сумма.
+    */
+    .spend-structure {
+      margin-top: 1.15rem;
+      padding: 1rem 1rem 0.85rem;
+      border-radius: 12px;
+      border: 1px solid var(--stat-border);
+      background: var(--stat-bg);
+      transition: var(--transition-theme);
+    }
+
+    .spend-structure-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--analysis-title);
+      margin: 0 0 0.85rem;
+    }
+
+    .spend-structure-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .spend-row {
+      padding: 0.7rem 0.65rem 0.7rem 0.85rem;
+      margin-bottom: 0.5rem;
+      border-radius: 0 10px 10px 0;
+      border-left: 3px solid var(--spend-accent, #64748b);
+      background: var(--spend-row-fill, transparent);
+      transition: var(--transition-theme);
+    }
+
+    .spend-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .spend-row-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .spend-row-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--stat-value);
+    }
+
+    .spend-row-sum {
+      font-size: 1rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--stat-value);
+      overflow-wrap: anywhere;
+      max-width: 100%;
+      text-align: right;
+    }
+
+    .spend-row-hint {
+      margin: 0.35rem 0 0;
+      font-size: 0.72rem;
+      line-height: 1.35;
+      color: var(--stat-label);
+    }
+
+    .spend-row--mandatory {
+      --spend-accent: #2563eb;
+      --spend-row-fill: rgba(37, 99, 235, 0.08);
+    }
+
+    .spend-row--household {
+      --spend-accent: #059669;
+      --spend-row-fill: rgba(5, 150, 105, 0.08);
+    }
+
+    .spend-row--personal {
+      --spend-accent: #7c3aed;
+      --spend-row-fill: rgba(124, 58, 237, 0.08);
+    }
+
+    .spend-row--other {
+      --spend-accent: #d97706;
+      --spend-row-fill: rgba(217, 119, 6, 0.1);
+    }
+
+    html[data-theme="dark"] .spend-row--mandatory {
+      --spend-row-fill: rgba(59, 130, 246, 0.14);
+    }
+
+    html[data-theme="dark"] .spend-row--household {
+      --spend-row-fill: rgba(52, 211, 153, 0.12);
+    }
+
+    html[data-theme="dark"] .spend-row--personal {
+      --spend-row-fill: rgba(167, 139, 250, 0.14);
+    }
+
+    html[data-theme="dark"] .spend-row--other {
+      --spend-row-fill: rgba(251, 191, 36, 0.1);
     }
 
     /* Финансовый статус — отдельная заметная плашка */
@@ -451,10 +692,60 @@
 
     footer {
       text-align: center;
-      margin-top: 1.25rem;
-      font-size: 0.8rem;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--results-border);
+      transition: border-color 0.35s ease;
+    }
+
+    .footer-main {
+      margin: 0 0 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--stat-value);
+      line-height: 1.4;
+    }
+
+    .footer-meta {
+      margin: 0;
+      font-size: 0.75rem;
       color: var(--footer);
-      transition: var(--transition-theme);
+      line-height: 1.45;
+    }
+
+    /* Узкие телефоны: кнопка темы компактнее, заголовок не упирается в край */
+    @media (max-width: 420px) {
+      .btn-theme {
+        font-size: 0.72rem;
+        padding: 0.48rem 0.55rem;
+      }
+
+      h1 {
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+      }
+
+      .card {
+        padding: 1.1rem 1rem;
+      }
+
+      .actions button {
+        min-width: 0;
+        width: 100%;
+        flex: 1 1 100%;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .spend-row-head {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.35rem;
+      }
+
+      .spend-row-sum {
+        text-align: left;
+      }
     }
   </style>
 </head>
@@ -553,11 +844,64 @@
           </div>
         </div>
 
+        <!-- Визуальный анализ доли расходов (заполняется в calculateBudget) -->
+        <div class="expense-analysis" id="expense-analysis">
+          <div class="expense-analysis-title">Расходы от дохода</div>
+          <div class="analysis-bar-track" aria-hidden="true">
+            <div class="analysis-bar-fill zone-green" id="analysis-bar-fill"></div>
+          </div>
+          <div class="analysis-bar-labels">
+            <span>0%</span>
+            <span>70%</span>
+            <span>100%</span>
+          </div>
+          <p class="analysis-caption" id="analysis-caption"></p>
+          <p class="analysis-recommendation" id="analysis-recommendation"></p>
+        </div>
+
+        <!-- Группировка расходов по смыслу (суммы подставляет calculateBudget) -->
+        <div class="spend-structure" id="spend-structure">
+          <h2 class="spend-structure-title">Структура расходов</h2>
+          <ul class="spend-structure-list">
+            <li class="spend-row spend-row--mandatory">
+              <div class="spend-row-head">
+                <span class="spend-row-name">Обязательные расходы</span>
+                <span class="spend-row-sum" id="out-spend-mandatory">—</span>
+              </div>
+              <p class="spend-row-hint">Коммунальные платежи, кредиты, связь и интернет</p>
+            </li>
+            <li class="spend-row spend-row--household">
+              <div class="spend-row-head">
+                <span class="spend-row-name">Бытовые расходы</span>
+                <span class="spend-row-sum" id="out-spend-household">—</span>
+              </div>
+              <p class="spend-row-hint">Продукты, транспорт</p>
+            </li>
+            <li class="spend-row spend-row--personal">
+              <div class="spend-row-head">
+                <span class="spend-row-name">Личные расходы</span>
+                <span class="spend-row-sum" id="out-spend-personal">—</span>
+              </div>
+              <p class="spend-row-hint">Дети и школа, здоровье, развлечения</p>
+            </li>
+            <li class="spend-row spend-row--other">
+              <div class="spend-row-head">
+                <span class="spend-row-name">Прочие расходы</span>
+                <span class="spend-row-sum" id="out-spend-other">—</span>
+              </div>
+              <p class="spend-row-hint">Прочие расходы (поле формы)</p>
+            </li>
+          </ul>
+        </div>
+
         <div class="status" id="out-status" role="status"></div>
       </div>
     </div>
 
-    <footer>Работает полностью офлайн · без библиотек</footer>
+    <footer>
+      <p class="footer-main">Калькулятор семейного бюджета | Учебный проект</p>
+      <p class="footer-meta">Работает полностью офлайн · один файл · без внешних библиотек</p>
+    </footer>
   </div>
 
   <script>
@@ -582,6 +926,13 @@
     var outExpenses = document.getElementById("out-expenses");
     var outPercent = document.getElementById("out-percent");
     var outStatus = document.getElementById("out-status");
+    var analysisBarFill = document.getElementById("analysis-bar-fill");
+    var analysisCaption = document.getElementById("analysis-caption");
+    var analysisRecommendation = document.getElementById("analysis-recommendation");
+    var outSpendMandatory = document.getElementById("out-spend-mandatory");
+    var outSpendHousehold = document.getElementById("out-spend-household");
+    var outSpendPersonal = document.getElementById("out-spend-personal");
+    var outSpendOther = document.getElementById("out-spend-other");
 
     /**
      * Возвращает текущую тему: "light" или "dark".
@@ -682,6 +1033,78 @@
     }
 
     /**
+     * Обновляет прогресс-бар и текстовую рекомендацию по доле расходов.
+     * Зоны: меньше 70% — зелёная, 70–100% — жёлтая, больше 100% — красная (расходы больше дохода).
+     * Не меняет числовые итоги — только визуал и подсказки.
+     */
+    function updateExpenseAnalysis(totalIncome, totalExpenses) {
+      if (!analysisBarFill || !analysisCaption || !analysisRecommendation) return;
+
+      var zoneClass = "zone-green";
+      var barWidth = 0;
+      var caption = "";
+      var recommendation = "";
+
+      if (totalIncome > 0) {
+        var ratio = totalExpenses / totalIncome;
+        var pct = ratio * 100;
+        // Ширина заливки: до 100% ширины трека; при перерасходе полоса заполняется целиком (красная зона)
+        barWidth = ratio <= 1 ? pct : 100;
+
+        caption =
+          "Расходы составляют " +
+          pct.toLocaleString("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: 1 }) +
+          " % от дохода.";
+
+        if (ratio < 0.7) {
+          zoneClass = "zone-green";
+          recommendation = "Можно откладывать часть дохода";
+        } else if (ratio <= 1) {
+          zoneClass = "zone-yellow";
+          recommendation = "Стоит пересмотреть необязательные траты";
+        } else {
+          zoneClass = "zone-red";
+          recommendation = "Нужно срочно сократить расходы или увеличить доход";
+        }
+      } else if (totalExpenses > 0) {
+        // Доход не указан, но расходы есть — по смыслу это перерасход
+        barWidth = 100;
+        zoneClass = "zone-red";
+        caption = "Доход равен нулю: нельзя посчитать долю расходов от дохода.";
+        recommendation = "Нужно срочно сократить расходы или увеличить доход";
+      } else {
+        barWidth = 0;
+        zoneClass = "zone-green";
+        caption = "Укажите доход, чтобы увидеть долю расходов на шкале.";
+        recommendation = "";
+      }
+
+      analysisBarFill.classList.remove("zone-green", "zone-yellow", "zone-red");
+      analysisBarFill.classList.add(zoneClass);
+      // Сброс ширины на кадр — чтобы CSS transition снова сработал при повторном расчёте с тем же значением
+      analysisBarFill.style.width = "0%";
+      window.requestAnimationFrame(function () {
+        analysisBarFill.style.width = barWidth + "%";
+      });
+
+      analysisCaption.textContent = caption;
+      analysisRecommendation.textContent = recommendation;
+      analysisRecommendation.style.display = recommendation ? "block" : "none";
+    }
+
+    /**
+     * Заполняет блок «Структура расходов»: суммы по группам из уже посчитанных полей формы.
+     * Обязательные: коммунальные + кредиты + связь; бытовые: продукты + транспорт;
+     * личные: дети + здоровье + развлечения; прочие: поле «Прочие расходы».
+     */
+    function updateExpenseStructure(mandatory, household, personal, otherOnly) {
+      if (outSpendMandatory) outSpendMandatory.textContent = formatMoney(mandatory);
+      if (outSpendHousehold) outSpendHousehold.textContent = formatMoney(household);
+      if (outSpendPersonal) outSpendPersonal.textContent = formatMoney(personal);
+      if (outSpendOther) outSpendOther.textContent = formatMoney(otherOnly);
+    }
+
+    /**
      * Основная функция расчёта: вызывается при отправке формы.
      */
     function calculateBudget(ev) {
@@ -694,17 +1117,24 @@
       var extra = readNumber("extra");
       var totalIncome = salary1 + salary2 + extra;
 
-      // --- Суммируем все статьи расходов ---
+      // --- Читаем каждую статью расхода (один раз), затем сумма и группы ---
+      var food = readNumber("food");
+      var utilities = readNumber("utilities");
+      var transport = readNumber("transport");
+      var comm = readNumber("comm");
+      var credits = readNumber("credits");
+      var kids = readNumber("kids");
+      var health = readNumber("health");
+      var fun = readNumber("fun");
+      var other = readNumber("other");
+
       var totalExpenses =
-        readNumber("food") +
-        readNumber("utilities") +
-        readNumber("transport") +
-        readNumber("comm") +
-        readNumber("credits") +
-        readNumber("kids") +
-        readNumber("health") +
-        readNumber("fun") +
-        readNumber("other");
+        food + utilities + transport + comm + credits + kids + health + fun + other;
+
+      var sumMandatory = utilities + credits + comm;
+      var sumHousehold = food + transport;
+      var sumPersonal = kids + health + fun;
+      var sumOtherGroup = other;
 
       // Остаток = доходы минус расходы
       var remainder = totalIncome - totalExpenses;
@@ -740,6 +1170,12 @@
       // Сбрасываем старые классы статуса и ставим новый
       outStatus.className = "status " + status.cls;
 
+      // Визуальный анализ доли расходов (прогресс-бар + рекомендация)
+      updateExpenseAnalysis(totalIncome, totalExpenses);
+
+      // Структура расходов по группам
+      updateExpenseStructure(sumMandatory, sumHousehold, sumPersonal, sumOtherGroup);
+
       // Показываем блок результатов
       resultsEl.classList.add("visible");
     }
@@ -753,6 +1189,20 @@
       outRemainder.classList.remove("positive", "negative");
       outStatus.textContent = "";
       outStatus.className = "status";
+      if (analysisBarFill) {
+        analysisBarFill.style.width = "0%";
+        analysisBarFill.classList.remove("zone-yellow", "zone-red");
+        analysisBarFill.classList.add("zone-green");
+      }
+      if (analysisCaption) analysisCaption.textContent = "";
+      if (analysisRecommendation) {
+        analysisRecommendation.textContent = "";
+        analysisRecommendation.style.display = "none";
+      }
+      if (outSpendMandatory) outSpendMandatory.textContent = "—";
+      if (outSpendHousehold) outSpendHousehold.textContent = "—";
+      if (outSpendPersonal) outSpendPersonal.textContent = "—";
+      if (outSpendOther) outSpendOther.textContent = "—";
     }
 
     // Слушатель отправки формы (кнопка «Рассчитать бюджет» с type="submit")
