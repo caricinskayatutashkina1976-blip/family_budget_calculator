@@ -323,10 +323,11 @@
       background: var(--input-focus-bg);
     }
 
-    /* Ряд с кнопками */
+    /* Ряд с кнопками: на узких экранах — в столбик (см. медиазапрос ниже) */
     .actions {
       display: flex;
       flex-wrap: wrap;
+      flex-direction: row;
       gap: 0.65rem;
       margin-top: 1.35rem;
     }
@@ -384,8 +385,9 @@
       display: block;
     }
 
-    /* Крупная итоговая сумма (остаток) */
+    /* Крупная итоговая сумма (остаток): скрыта до расчёта (класс .result-shown ставит JS) */
     .hero-balance {
+      display: none;
       text-align: center;
       padding: 1rem 0.5rem 1.25rem;
       background: var(--hero-bg);
@@ -393,6 +395,10 @@
       margin-bottom: 1rem;
       border: 1px solid var(--hero-border);
       transition: var(--transition-theme);
+    }
+
+    .results.visible .hero-balance.result-shown {
+      display: block;
     }
 
     .hero-balance .label {
@@ -556,15 +562,20 @@
 
     /*
       === СТРУКТУРА РАСХОДОВ ===
-      Группы с цветной полосой слева и подсказкой, из каких полей формы сложена сумма.
+      Скрыта до расчёта (класс .result-shown на #spend-structure ставит JS).
     */
     .spend-structure {
+      display: none;
       margin-top: 1.15rem;
       padding: 1rem 1rem 0.85rem;
       border-radius: 12px;
       border: 1px solid var(--stat-border);
       background: var(--stat-bg);
       transition: var(--transition-theme);
+    }
+
+    .results.visible #spend-structure.result-shown {
+      display: block;
     }
 
     .spend-structure-title {
@@ -713,6 +724,20 @@
       line-height: 1.45;
     }
 
+    /* Мобильная версия: кнопки «Рассчитать» и «Очистить» строго друг под другом */
+    @media (max-width: 640px) {
+      .actions {
+        flex-direction: column;
+        flex-wrap: nowrap;
+      }
+
+      .actions button {
+        width: 100%;
+        min-width: 0;
+        flex: 0 0 auto;
+      }
+    }
+
     /* Узкие телефоны: кнопка темы компактнее, заголовок не упирается в край */
     @media (max-width: 420px) {
       .btn-theme {
@@ -727,12 +752,6 @@
 
       .card {
         padding: 1.1rem 1rem;
-      }
-
-      .actions button {
-        min-width: 0;
-        width: 100%;
-        flex: 1 1 100%;
       }
     }
 
@@ -933,6 +952,8 @@
     var outSpendHousehold = document.getElementById("out-spend-household");
     var outSpendPersonal = document.getElementById("out-spend-personal");
     var outSpendOther = document.getElementById("out-spend-other");
+    var heroBalanceEl = document.querySelector(".hero-balance");
+    var spendStructureEl = document.getElementById("spend-structure");
 
     /**
      * Возвращает текущую тему: "light" или "dark".
@@ -1176,6 +1197,10 @@
       // Структура расходов по группам
       updateExpenseStructure(sumMandatory, sumHousehold, sumPersonal, sumOtherGroup);
 
+      /* Показ блока «Остаток за месяц» и «Структура расходов» только после расчёта */
+      if (heroBalanceEl) heroBalanceEl.classList.add("result-shown");
+      if (spendStructureEl) spendStructureEl.classList.add("result-shown");
+
       // Показываем блок результатов
       resultsEl.classList.add("visible");
     }
@@ -1186,6 +1211,8 @@
     function clearForm() {
       form.reset();
       resultsEl.classList.remove("visible");
+      if (heroBalanceEl) heroBalanceEl.classList.remove("result-shown");
+      if (spendStructureEl) spendStructureEl.classList.remove("result-shown");
       outRemainder.classList.remove("positive", "negative");
       outStatus.textContent = "";
       outStatus.className = "status";
