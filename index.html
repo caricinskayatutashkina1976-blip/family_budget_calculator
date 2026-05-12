@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <!-- Кодировка и масштаб для корректного отображения на телефонах -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Калькулятор семейного бюджета</title>
+  <style>
+    /*
+      === БАЗОВЫЕ СТИЛИ ===
+      * { box-sizing: border-box } — padding и border входят в ширину блока,
+      так проще верстать адаптивную сетку.
+    */
+    * {
+      box-sizing: border-box;
+    }
+
+    /* Светлый фон страницы и шрифт без подключения интернета (системные шрифты) */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(160deg, #e8f4fc 0%, #f5f0fa 50%, #fdf8f3 100%);
+      color: #1a2332;
+      line-height: 1.5;
+      padding: 1.25rem;
+    }
+
+    /* Ограничиваем ширину контента — на больших экранах карточка не растягивается слишком широко */
+    .wrap {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* Заголовок страницы */
+    h1 {
+      font-size: clamp(1.35rem, 4vw, 1.75rem);
+      font-weight: 700;
+      text-align: center;
+      margin: 0 0 0.35rem;
+      color: #0f3460;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #5a6b7d;
+      margin: 0 0 1.5rem;
+    }
+
+    /* Карточка — основной блок с полями и результатами */
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(15, 52, 96, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+      padding: 1.5rem;
+      border: 1px solid rgba(15, 52, 96, 0.06);
+    }
+
+    @media (min-width: 480px) {
+      .card {
+        padding: 1.75rem 2rem;
+      }
+    }
+
+    /* Секции «Доходы» и «Расходы» */
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #3d5a80;
+      margin: 1.25rem 0 0.75rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 2px solid #e3eef8;
+    }
+
+    .section-title:first-of-type {
+      margin-top: 0;
+    }
+
+    /* Одна строка: подпись + поле ввода */
+    .field {
+      margin-bottom: 0.85rem;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #334155;
+      margin-bottom: 0.35rem;
+    }
+
+    /* Поля ввода чисел */
+    .field input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      font-size: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      background: #f8fafc;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .field input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+      background: #fff;
+    }
+
+    /* Ряд с кнопками */
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      margin-top: 1.35rem;
+    }
+
+    .actions button {
+      flex: 1;
+      min-width: 140px;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.15s;
+    }
+
+    .actions button:active {
+      transform: scale(0.98);
+    }
+
+    /* Основная кнопка расчёта */
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    }
+
+    /* Вторичная кнопка «Очистить» */
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    /* Блок результатов скрыт до первого расчёта */
+    .results {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e2e8f0;
+      display: none;
+    }
+
+    .results.visible {
+      display: block;
+    }
+
+    /* Крупная итоговая сумма (остаток) */
+    .hero-balance {
+      text-align: center;
+      padding: 1rem 0.5rem 1.25rem;
+      background: linear-gradient(180deg, #f0f9ff 0%, #fff 100%);
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      border: 1px solid #bae6fd;
+    }
+
+    .hero-balance .label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #0369a1;
+      margin-bottom: 0.25rem;
+    }
+
+    .hero-balance .amount {
+      font-size: clamp(1.75rem, 7vw, 2.35rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #0c4a6e;
+      line-height: 1.2;
+    }
+
+    /* Положительный / отрицательный остаток — разные цвета */
+    .hero-balance .amount.positive {
+      color: #047857;
+    }
+
+    .hero-balance .amount.negative {
+      color: #b91c1c;
+    }
+
+    /* Сетка мелких показателей */
+    .stats {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    @media (min-width: 400px) {
+      .stats {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .stat {
+      background: #f8fafc;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .stat .stat-label {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 0.2rem;
+    }
+
+    .stat .stat-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* Финансовый статус — отдельная заметная плашка */
+    .status {
+      margin-top: 1rem;
+      padding: 1rem 1.1rem;
+      border-radius: 10px;
+      font-weight: 600;
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    .status.excellent {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+    }
+
+    .status.balance {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+    }
+
+    .status.deficit {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 1.25rem;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Калькулятор семейного бюджета</h1>
+    <p class="subtitle">Расчёт за один месяц. Все данные остаются в браузере.</p>
+
+    <div class="card">
+      <!-- Форма: method отсутствует — отправка по умолчанию не уходит на сервер, обработка через JS -->
+      <form id="budget-form" novalidate>
+        <p class="section-title">Доходы</p>
+
+        <div class="field">
+          <label for="salary1">Зарплата 1 (₽)</label>
+          <input type="number" id="salary1" name="salary1" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="salary2">Зарплата 2 (₽)</label>
+          <input type="number" id="salary2" name="salary2" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="extra">Дополнительный доход (₽)</label>
+          <input type="number" id="extra" name="extra" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+
+        <p class="section-title">Расходы</p>
+
+        <div class="field">
+          <label for="food">Продукты (₽)</label>
+          <input type="number" id="food" name="food" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="utilities">Коммунальные платежи (₽)</label>
+          <input type="number" id="utilities" name="utilities" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="transport">Транспорт (₽)</label>
+          <input type="number" id="transport" name="transport" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="comm">Связь и интернет (₽)</label>
+          <input type="number" id="comm" name="comm" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="credits">Кредиты (₽)</label>
+          <input type="number" id="credits" name="credits" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="kids">Дети и школа (₽)</label>
+          <input type="number" id="kids" name="kids" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="health">Здоровье (₽)</label>
+          <input type="number" id="health" name="health" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="fun">Развлечения (₽)</label>
+          <input type="number" id="fun" name="fun" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="other">Прочие расходы (₽)</label>
+          <input type="number" id="other" name="other" min="0" step="0.01" placeholder="0" inputmode="decimal">
+        </div>
+
+        <div class="actions">
+          <!-- type="submit" — при нажатии срабатывает событие submit у формы -->
+          <button type="submit" class="btn-primary">Рассчитать бюджет</button>
+          <!-- type="button" — не отправляет форму, только наш обработчик -->
+          <button type="button" class="btn-secondary" id="btn-clear">Очистить</button>
+        </div>
+      </form>
+
+      <!-- Результаты показываются после расчёта (класс .visible добавляется из JS) -->
+      <div class="results" id="results" aria-live="polite">
+        <div class="hero-balance">
+          <div class="label">Остаток за месяц</div>
+          <div class="amount" id="out-remainder">—</div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">Общий доход</div>
+            <div class="stat-value" id="out-income">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Общие расходы</div>
+            <div class="stat-value" id="out-expenses">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Расходы от дохода</div>
+            <div class="stat-value" id="out-percent">—</div>
+          </div>
+        </div>
+
+        <div class="status" id="out-status" role="status"></div>
+      </div>
+    </div>
+
+    <footer>Работает полностью офлайн · без библиотек</footer>
+  </div>
+
+  <script>
+    /*
+      === ЛОГИКА КАЛЬКУЛЯТОРА ===
+      Мы находим элементы страницы (DOM), вешаем обработчики событий
+      и при нажатии «Рассчитать» суммируем поля и выводим результат.
+    */
+
+    // Ссылки на форму и блок результатов — удобно обращаться по id
+    var form = document.getElementById("budget-form");
+    var resultsEl = document.getElementById("results");
+    var btnClear = document.getElementById("btn-clear");
+
+    // Поля вывода
+    var outRemainder = document.getElementById("out-remainder");
+    var outIncome = document.getElementById("out-income");
+    var outExpenses = document.getElementById("out-expenses");
+    var outPercent = document.getElementById("out-percent");
+    var outStatus = document.getElementById("out-status");
+
+    /**
+     * Читает значение поля ввода как число.
+     * Пустая строка или невалидное значение считаются нулём — так проще для пользователя.
+     * parseFloat понимает десятичные числа с точкой.
+     */
+    function readNumber(id) {
+      var el = document.getElementById(id);
+      var v = parseFloat(el.value);
+      return isNaN(v) || v < 0 ? 0 : v;
+    }
+
+    /**
+     * Форматирует число для отображения: пробелы между разрядами, 2 знака после запятой при необходимости.
+     * toLocaleString использует локаль 'ru-RU' — привычный вид сумм.
+     */
+    function formatMoney(n) {
+      return n.toLocaleString("ru-RU", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }) + " ₽";
+    }
+
+    /**
+     * Определяет текст и CSS-класс статуса по правилам задания.
+     * twentyPercent — 20% от дохода; сравниваем с остатком (доход минус расходы).
+     */
+    function getFinancialStatus(totalIncome, remainder) {
+      // Если дохода нет, процент «запаса» от дохода математически не определён — упрощаем логику
+      if (totalIncome <= 0) {
+        if (remainder < 0) {
+          return { text: "Расходы превышают доходы", cls: "deficit" };
+        }
+        return { text: "Бюджет в балансе", cls: "balance" };
+      }
+
+      var threshold = totalIncome * 0.2;
+
+      if (remainder > threshold) {
+        return { text: "Отлично, есть запас", cls: "excellent" };
+      }
+      if (remainder >= 0) {
+        // от 0 до 20% дохода включительно
+        return { text: "Бюджет в балансе", cls: "balance" };
+      }
+      return { text: "Расходы превышают доходы", cls: "deficit" };
+    }
+
+    /**
+     * Основная функция расчёта: вызывается при отправке формы.
+     */
+    function calculateBudget(ev) {
+      // ev.preventDefault() — чтобы страница не перезагружалась (стандартное поведение формы)
+      if (ev) ev.preventDefault();
+
+      // --- Суммируем доходы ---
+      var salary1 = readNumber("salary1");
+      var salary2 = readNumber("salary2");
+      var extra = readNumber("extra");
+      var totalIncome = salary1 + salary2 + extra;
+
+      // --- Суммируем все статьи расходов ---
+      var totalExpenses =
+        readNumber("food") +
+        readNumber("utilities") +
+        readNumber("transport") +
+        readNumber("comm") +
+        readNumber("credits") +
+        readNumber("kids") +
+        readNumber("health") +
+        readNumber("fun") +
+        readNumber("other");
+
+      // Остаток = доходы минус расходы
+      var remainder = totalIncome - totalExpenses;
+
+      // Процент расходов от дохода (если доход 0 — делить нельзя, показываем прочерк)
+      var expensePercentText;
+      if (totalIncome > 0) {
+        var pct = (totalExpenses / totalIncome) * 100;
+        expensePercentText = pct.toLocaleString("ru-RU", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 1
+        }) + " %";
+      } else {
+        expensePercentText = "—";
+      }
+
+      // Заполняем блок результатов
+      outIncome.textContent = formatMoney(totalIncome);
+      outExpenses.textContent = formatMoney(totalExpenses);
+      outPercent.textContent = expensePercentText;
+      outRemainder.textContent = formatMoney(remainder);
+
+      // Крупная сумма: зелёный если плюс, красный если минус
+      outRemainder.classList.remove("positive", "negative");
+      if (remainder > 0) {
+        outRemainder.classList.add("positive");
+      } else if (remainder < 0) {
+        outRemainder.classList.add("negative");
+      }
+
+      var status = getFinancialStatus(totalIncome, remainder);
+      outStatus.textContent = status.text;
+      // Сбрасываем старые классы статуса и ставим новый
+      outStatus.className = "status " + status.cls;
+
+      // Показываем блок результатов
+      resultsEl.classList.add("visible");
+    }
+
+    /**
+     * Очищает все поля и скрывает результаты.
+     */
+    function clearForm() {
+      form.reset();
+      resultsEl.classList.remove("visible");
+      outRemainder.classList.remove("positive", "negative");
+      outStatus.textContent = "";
+      outStatus.className = "status";
+    }
+
+    // Слушатель отправки формы (кнопка «Рассчитать бюджет» с type="submit")
+    form.addEventListener("submit", calculateBudget);
+
+    // Кнопка «Очистить»
+    btnClear.addEventListener("click", clearForm);
+  </script>
+</body>
+</html>
