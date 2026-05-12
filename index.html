@@ -5,7 +5,143 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Калькулятор семейного бюджета</title>
+  <!-- Сразу ставим data-theme из localStorage, чтобы не мигала светлая тема при загрузке -->
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("family-budget-theme") === "dark") {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (e) { /* localStorage может быть недоступен — остаёмся в светлой теме */ }
+    })();
+  </script>
   <style>
+    /*
+      === ПЕРЕМЕННЫЕ ТЕМЫ ===
+      Цвета вынесены в :root (светлая тема по умолчанию).
+      Для тёмной темы те же имена переопределяются в html[data-theme="dark"].
+    */
+    :root {
+      color-scheme: light;
+      --transition-theme: background 0.45s ease, color 0.35s ease, border-color 0.35s ease,
+        box-shadow 0.4s ease, fill 0.35s ease;
+
+      --body-bg: linear-gradient(160deg, #e8f4fc 0%, #f5f0fa 50%, #fdf8f3 100%);
+      --text: #1a2332;
+      --h1: #0f3460;
+      --subtitle: #5a6b7d;
+
+      --card-bg: #fff;
+      --card-border: rgba(15, 52, 96, 0.06);
+      --card-shadow: 0 4px 24px rgba(15, 52, 96, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+
+      --section-title: #3d5a80;
+      --section-border: #e3eef8;
+      --label: #334155;
+
+      --input-bg: #f8fafc;
+      --input-border: #cbd5e1;
+      --input-focus-bg: #fff;
+      --input-focus-ring: rgba(59, 130, 246, 0.2);
+
+      --results-border: #e2e8f0;
+
+      --hero-bg: linear-gradient(180deg, #f0f9ff 0%, #fff 100%);
+      --hero-border: #bae6fd;
+      --hero-label: #0369a1;
+      --hero-amount: #0c4a6e;
+
+      --stat-bg: #f8fafc;
+      --stat-border: #e2e8f0;
+      --stat-label: #64748b;
+      --stat-value: #0f172a;
+
+      --footer: #94a3b8;
+
+      --btn-secondary-bg: #f1f5f9;
+      --btn-secondary-color: #475569;
+      --btn-secondary-border: #e2e8f0;
+      --btn-secondary-hover: #e2e8f0;
+
+      --btn-theme-bg: #fff;
+      --btn-theme-color: #334155;
+      --btn-theme-border: #e2e8f0;
+      --btn-theme-shadow: 0 2px 12px rgba(15, 52, 96, 0.1);
+      --btn-theme-hover: #f8fafc;
+
+      --positive: #047857;
+      --negative: #b91c1c;
+
+      --excellent-bg: #d1fae5;
+      --excellent-text: #065f46;
+      --excellent-border: #6ee7b7;
+      --balance-bg: #fef3c7;
+      --balance-text: #92400e;
+      --balance-border: #fcd34d;
+      --deficit-bg: #fee2e2;
+      --deficit-text: #991b1b;
+      --deficit-border: #fca5a5;
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --body-bg: linear-gradient(160deg, #0c1929 0%, #151e2e 50%, #1a1520 100%);
+      --text: #e2e8f0;
+      --h1: #93c5fd;
+      --subtitle: #94a3b8;
+
+      --card-bg: #1e293b;
+      --card-border: rgba(148, 163, 184, 0.15);
+      --card-shadow: 0 4px 28px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.04);
+
+      --section-title: #7dd3fc;
+      --section-border: rgba(56, 189, 248, 0.2);
+      --label: #cbd5e1;
+
+      --input-bg: #0f172a;
+      --input-border: #475569;
+      --input-focus-bg: #1e293b;
+      --input-focus-ring: rgba(96, 165, 250, 0.35);
+
+      --results-border: #334155;
+
+      --hero-bg: linear-gradient(180deg, #0c4a6e 0%, #1e293b 100%);
+      --hero-border: #0369a1;
+      --hero-label: #7dd3fc;
+      --hero-amount: #e0f2fe;
+
+      --stat-bg: #0f172a;
+      --stat-border: #334155;
+      --stat-label: #94a3b8;
+      --stat-value: #f1f5f9;
+
+      --footer: #64748b;
+
+      --btn-secondary-bg: #334155;
+      --btn-secondary-color: #e2e8f0;
+      --btn-secondary-border: #475569;
+      --btn-secondary-hover: #475569;
+
+      --btn-theme-bg: #1e293b;
+      --btn-theme-color: #e2e8f0;
+      --btn-theme-border: #475569;
+      --btn-theme-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+      --btn-theme-hover: #334155;
+
+      --positive: #34d399;
+      --negative: #f87171;
+
+      --excellent-bg: rgba(16, 185, 129, 0.2);
+      --excellent-text: #6ee7b7;
+      --excellent-border: rgba(52, 211, 153, 0.45);
+      --balance-bg: rgba(251, 191, 36, 0.15);
+      --balance-text: #fcd34d;
+      --balance-border: rgba(251, 191, 36, 0.4);
+      --deficit-bg: rgba(248, 113, 113, 0.15);
+      --deficit-text: #fca5a5;
+      --deficit-border: rgba(248, 113, 113, 0.45);
+    }
+
     /*
       === БАЗОВЫЕ СТИЛИ ===
       * { box-sizing: border-box } — padding и border входят в ширину блока,
@@ -15,15 +151,50 @@
       box-sizing: border-box;
     }
 
-    /* Светлый фон страницы и шрифт без подключения интернета (системные шрифты) */
+    html {
+      transition: var(--transition-theme);
+    }
+
+    /* Фон страницы и текст берутся из переменных — плавная смена темы */
     body {
       margin: 0;
       min-height: 100vh;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: linear-gradient(160deg, #e8f4fc 0%, #f5f0fa 50%, #fdf8f3 100%);
-      color: #1a2332;
+      background: var(--body-bg);
+      color: var(--text);
       line-height: 1.5;
-      padding: 1.25rem;
+      padding: 3.75rem 1.25rem 1.25rem;
+      transition: var(--transition-theme);
+    }
+
+    /*
+      Кнопка переключения темы: фиксированно в правом верхнем углу окна браузера.
+      position: fixed — не прокручивается вместе с контентом.
+    */
+    .btn-theme {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 100;
+      padding: 0.55rem 0.9rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: inherit;
+      border: 1px solid var(--btn-theme-border);
+      border-radius: 10px;
+      cursor: pointer;
+      background: var(--btn-theme-bg);
+      color: var(--btn-theme-color);
+      box-shadow: var(--btn-theme-shadow);
+      transition: var(--transition-theme), transform 0.1s;
+    }
+
+    .btn-theme:hover {
+      background: var(--btn-theme-hover);
+    }
+
+    .btn-theme:active {
+      transform: scale(0.98);
     }
 
     /* Ограничиваем ширину контента — на больших экранах карточка не растягивается слишком широко */
@@ -38,23 +209,26 @@
       font-weight: 700;
       text-align: center;
       margin: 0 0 0.35rem;
-      color: #0f3460;
+      color: var(--h1);
+      transition: var(--transition-theme);
     }
 
     .subtitle {
       text-align: center;
       font-size: 0.9rem;
-      color: #5a6b7d;
+      color: var(--subtitle);
       margin: 0 0 1.5rem;
+      transition: var(--transition-theme);
     }
 
     /* Карточка — основной блок с полями и результатами */
     .card {
-      background: #fff;
+      background: var(--card-bg);
       border-radius: 16px;
-      box-shadow: 0 4px 24px rgba(15, 52, 96, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+      box-shadow: var(--card-shadow);
       padding: 1.5rem;
-      border: 1px solid rgba(15, 52, 96, 0.06);
+      border: 1px solid var(--card-border);
+      transition: var(--transition-theme);
     }
 
     @media (min-width: 480px) {
@@ -69,10 +243,11 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: #3d5a80;
+      color: var(--section-title);
       margin: 1.25rem 0 0.75rem;
       padding-bottom: 0.35rem;
-      border-bottom: 2px solid #e3eef8;
+      border-bottom: 2px solid var(--section-border);
+      transition: var(--transition-theme);
     }
 
     .section-title:first-of-type {
@@ -88,8 +263,9 @@
       display: block;
       font-size: 0.875rem;
       font-weight: 500;
-      color: #334155;
+      color: var(--label);
       margin-bottom: 0.35rem;
+      transition: var(--transition-theme);
     }
 
     /* Поля ввода чисел */
@@ -97,17 +273,18 @@
       width: 100%;
       padding: 0.65rem 0.85rem;
       font-size: 1rem;
-      border: 1px solid #cbd5e1;
+      border: 1px solid var(--input-border);
       border-radius: 10px;
-      background: #f8fafc;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      background: var(--input-bg);
+      color: var(--text);
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.35s ease, color 0.35s ease;
     }
 
     .field input:focus {
       outline: none;
       border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-      background: #fff;
+      box-shadow: 0 0 0 3px var(--input-focus-ring);
+      background: var(--input-focus-bg);
     }
 
     /* Ряд с кнопками */
@@ -134,7 +311,7 @@
       transform: scale(0.98);
     }
 
-    /* Основная кнопка расчёта */
+    /* Основная кнопка расчёта (градиент не зависит от темы — узнаваемая кнопка) */
     .btn-primary {
       background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
       color: #fff;
@@ -147,21 +324,23 @@
 
     /* Вторичная кнопка «Очистить» */
     .btn-secondary {
-      background: #f1f5f9;
-      color: #475569;
-      border: 1px solid #e2e8f0;
+      background: var(--btn-secondary-bg);
+      color: var(--btn-secondary-color);
+      border: 1px solid var(--btn-secondary-border);
+      transition: var(--transition-theme), transform 0.1s;
     }
 
     .btn-secondary:hover {
-      background: #e2e8f0;
+      background: var(--btn-secondary-hover);
     }
 
     /* Блок результатов скрыт до первого расчёта */
     .results {
       margin-top: 1.5rem;
       padding-top: 1.5rem;
-      border-top: 1px solid #e2e8f0;
+      border-top: 1px solid var(--results-border);
       display: none;
+      transition: border-color 0.35s ease;
     }
 
     .results.visible {
@@ -172,10 +351,11 @@
     .hero-balance {
       text-align: center;
       padding: 1rem 0.5rem 1.25rem;
-      background: linear-gradient(180deg, #f0f9ff 0%, #fff 100%);
+      background: var(--hero-bg);
       border-radius: 12px;
       margin-bottom: 1rem;
-      border: 1px solid #bae6fd;
+      border: 1px solid var(--hero-border);
+      transition: var(--transition-theme);
     }
 
     .hero-balance .label {
@@ -183,25 +363,27 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: #0369a1;
+      color: var(--hero-label);
       margin-bottom: 0.25rem;
+      transition: var(--transition-theme);
     }
 
     .hero-balance .amount {
       font-size: clamp(1.75rem, 7vw, 2.35rem);
       font-weight: 800;
       letter-spacing: -0.02em;
-      color: #0c4a6e;
+      color: var(--hero-amount);
       line-height: 1.2;
+      transition: color 0.35s ease;
     }
 
-    /* Положительный / отрицательный остаток — разные цвета */
+    /* Положительный / отрицательный остаток — цвета из переменных для читаемости в обеих темах */
     .hero-balance .amount.positive {
-      color: #047857;
+      color: var(--positive);
     }
 
     .hero-balance .amount.negative {
-      color: #b91c1c;
+      color: var(--negative);
     }
 
     /* Сетка мелких показателей */
@@ -217,22 +399,25 @@
     }
 
     .stat {
-      background: #f8fafc;
+      background: var(--stat-bg);
       padding: 0.75rem 1rem;
       border-radius: 10px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid var(--stat-border);
+      transition: var(--transition-theme);
     }
 
     .stat .stat-label {
       font-size: 0.75rem;
-      color: #64748b;
+      color: var(--stat-label);
       margin-bottom: 0.2rem;
+      transition: var(--transition-theme);
     }
 
     .stat .stat-value {
       font-size: 1.1rem;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--stat-value);
+      transition: var(--transition-theme);
     }
 
     /* Финансовый статус — отдельная заметная плашка */
@@ -243,35 +428,40 @@
       font-weight: 600;
       text-align: center;
       font-size: 1rem;
+      transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease;
     }
 
     .status.excellent {
-      background: #d1fae5;
-      color: #065f46;
-      border: 1px solid #6ee7b7;
+      background: var(--excellent-bg);
+      color: var(--excellent-text);
+      border: 1px solid var(--excellent-border);
     }
 
     .status.balance {
-      background: #fef3c7;
-      color: #92400e;
-      border: 1px solid #fcd34d;
+      background: var(--balance-bg);
+      color: var(--balance-text);
+      border: 1px solid var(--balance-border);
     }
 
     .status.deficit {
-      background: #fee2e2;
-      color: #991b1b;
-      border: 1px solid #fca5a5;
+      background: var(--deficit-bg);
+      color: var(--deficit-text);
+      border: 1px solid var(--deficit-border);
     }
 
     footer {
       text-align: center;
       margin-top: 1.25rem;
       font-size: 0.8rem;
-      color: #94a3b8;
+      color: var(--footer);
+      transition: var(--transition-theme);
     }
   </style>
 </head>
 <body>
+  <!-- В светлой теме подпись «Тёмная», в тёмной — «Светлая»; текст обновляет JavaScript -->
+  <button type="button" class="btn-theme" id="btn-theme" aria-label="Переключить тему оформления">🌙 Тёмная</button>
+
   <div class="wrap">
     <h1>Калькулятор семейного бюджета</h1>
     <p class="subtitle">Расчёт за один месяц. Все данные остаются в браузере.</p>
@@ -377,10 +567,14 @@
       и при нажатии «Рассчитать» суммируем поля и выводим результат.
     */
 
+    // Ключ в localStorage для сохранения темы (отдельно от логики расчётов)
+    var THEME_KEY = "family-budget-theme";
+
     // Ссылки на форму и блок результатов — удобно обращаться по id
     var form = document.getElementById("budget-form");
     var resultsEl = document.getElementById("results");
     var btnClear = document.getElementById("btn-clear");
+    var btnTheme = document.getElementById("btn-theme");
 
     // Поля вывода
     var outRemainder = document.getElementById("out-remainder");
@@ -388,6 +582,57 @@
     var outExpenses = document.getElementById("out-expenses");
     var outPercent = document.getElementById("out-percent");
     var outStatus = document.getElementById("out-status");
+
+    /**
+     * Возвращает текущую тему: "light" или "dark".
+     * Тёмная тема задаётся атрибутом data-theme="dark" на элементе <html>.
+     */
+    function getTheme() {
+      return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    }
+
+    /**
+     * Устанавливает тему, записывает выбор в localStorage и обновляет подпись кнопки.
+     * Расчёты бюджета эта функция не трогает.
+     */
+    function setTheme(theme) {
+      if (theme === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        document.documentElement.removeAttribute("data-theme");
+      }
+      try {
+        localStorage.setItem(THEME_KEY, theme);
+      } catch (e) {
+        /* игнорируем, если хранилище недоступно */
+      }
+      updateThemeButtonLabel();
+    }
+
+    /**
+     * Текст кнопки: в светлой теме предлагаем перейти в тёмную и наоборот.
+     */
+    function updateThemeButtonLabel() {
+      if (!btnTheme) return;
+      if (getTheme() === "dark") {
+        btnTheme.textContent = "☀️ Светлая";
+        btnTheme.setAttribute("aria-label", "Включить светлую тему");
+      } else {
+        btnTheme.textContent = "🌙 Тёмная";
+        btnTheme.setAttribute("aria-label", "Включить тёмную тему");
+      }
+    }
+
+    function toggleTheme() {
+      setTheme(getTheme() === "dark" ? "light" : "dark");
+    }
+
+    // Синхронизируем подпись кнопки с темой, уже применённой скриптом в <head>
+    updateThemeButtonLabel();
+
+    if (btnTheme) {
+      btnTheme.addEventListener("click", toggleTheme);
+    }
 
     /**
      * Читает значение поля ввода как число.
