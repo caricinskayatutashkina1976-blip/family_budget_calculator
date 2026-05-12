@@ -766,6 +766,157 @@
         text-align: left;
       }
     }
+
+    /* === Ежедневные расходы (учёт + таблица, данные в localStorage) === */
+    .daily-expenses {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--results-border);
+    }
+
+    .daily-fields {
+      display: grid;
+      gap: 0.65rem 1rem;
+      grid-template-columns: 1fr 1fr;
+      margin-bottom: 0.75rem;
+    }
+
+    @media (max-width: 520px) {
+      .daily-fields {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .daily-add-btn {
+      width: 100%;
+      max-width: 320px;
+      margin-top: 0.25rem;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+
+    .daily-add-btn:hover {
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    }
+
+    .daily-add-btn:active {
+      transform: scale(0.98);
+    }
+
+    .daily-msg {
+      min-height: 1.25rem;
+      margin: 0.35rem 0 0.5rem;
+      font-size: 0.8rem;
+      color: #b91c1c;
+    }
+
+    html[data-theme="dark"] .daily-msg {
+      color: #f87171;
+    }
+
+    .daily-table-wrap {
+      margin-top: 1rem;
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 10px;
+      border: 1px solid var(--stat-border);
+    }
+
+    .daily-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      color: var(--text);
+    }
+
+    .daily-table th,
+    .daily-table td {
+      padding: 0.55rem 0.65rem;
+      text-align: left;
+      border-bottom: 1px solid var(--stat-border);
+      vertical-align: top;
+    }
+
+    .daily-table th {
+      font-weight: 700;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--stat-label);
+      background: var(--stat-bg);
+      white-space: nowrap;
+    }
+
+    .daily-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .daily-table td.daily-col-amount {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .daily-table td.daily-col-comment {
+      max-width: 12rem;
+      word-break: break-word;
+    }
+
+    .daily-btn-delete {
+      padding: 0.35rem 0.55rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: inherit;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid var(--btn-secondary-border);
+      background: var(--btn-secondary-bg);
+      color: var(--btn-secondary-color);
+      transition: var(--transition-theme), transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .daily-btn-delete:hover {
+      background: var(--btn-secondary-hover);
+    }
+
+    .daily-inline-total {
+      margin: 0.85rem 0 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--stat-value);
+    }
+
+    .daily-results-line {
+      margin: 0.65rem 0 0;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--stat-value);
+      background: var(--stat-bg);
+      border: 1px solid var(--stat-border);
+      border-radius: 10px;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
   </style>
 </head>
 <body>
@@ -841,6 +992,57 @@
         </div>
       </form>
 
+      <!-- Ежедневный учёт расходов: отдельно от месячной формы, хранение в localStorage -->
+      <section class="daily-expenses" id="daily-expenses" aria-labelledby="daily-title">
+        <p class="section-title" id="daily-title">Ежедневные расходы</p>
+        <div class="daily-fields">
+          <div class="field">
+            <label for="daily-date">Дата</label>
+            <input type="date" id="daily-date" name="daily-date">
+          </div>
+          <div class="field">
+            <label for="daily-category">Категория расхода</label>
+            <input type="text" id="daily-category" list="daily-categories" maxlength="120" placeholder="Например, продукты" autocomplete="off">
+            <datalist id="daily-categories">
+              <option value="Продукты"></option>
+              <option value="Коммунальные платежи"></option>
+              <option value="Транспорт"></option>
+              <option value="Связь и интернет"></option>
+              <option value="Кредиты"></option>
+              <option value="Дети и школа"></option>
+              <option value="Здоровье"></option>
+              <option value="Развлечения"></option>
+              <option value="Прочие расходы"></option>
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="daily-amount">Сумма (₽)</label>
+            <input type="number" id="daily-amount" min="0" step="0.01" placeholder="0" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="daily-comment">Комментарий</label>
+            <input type="text" id="daily-comment" maxlength="300" placeholder="Необязательно" autocomplete="off">
+          </div>
+        </div>
+        <p class="daily-msg" id="daily-msg" role="status"></p>
+        <button type="button" class="daily-add-btn" id="btn-daily-add">Добавить расход</button>
+        <div class="daily-table-wrap">
+          <table class="daily-table">
+            <thead>
+              <tr>
+                <th scope="col">Дата</th>
+                <th scope="col">Категория</th>
+                <th scope="col">Сумма</th>
+                <th scope="col">Комментарий</th>
+                <th scope="col"><span class="visually-hidden">Действие</span></th>
+              </tr>
+            </thead>
+            <tbody id="daily-tbody"></tbody>
+          </table>
+        </div>
+        <p class="daily-inline-total" id="daily-inline-total">Расходы по ежедневным записям: 0 ₽</p>
+      </section>
+
       <!-- Результаты показываются после расчёта (класс .visible добавляется из JS) -->
       <div class="results" id="results" aria-live="polite">
         <div class="hero-balance">
@@ -862,6 +1064,8 @@
             <div class="stat-value" id="out-percent">—</div>
           </div>
         </div>
+
+        <p class="daily-results-line" id="out-daily-results-line" aria-live="polite"></p>
 
         <!-- Визуальный анализ доли расходов (заполняется в calculateBudget) -->
         <div class="expense-analysis" id="expense-analysis">
@@ -908,7 +1112,7 @@
                 <span class="spend-row-name">Прочие расходы</span>
                 <span class="spend-row-sum" id="out-spend-other">—</span>
               </div>
-              <p class="spend-row-hint">Прочие расходы (поле формы)</p>
+              <p class="spend-row-hint">Поле «Прочие расходы» + ежедневные записи</p>
             </li>
           </ul>
         </div>
@@ -954,6 +1158,9 @@
     var outSpendOther = document.getElementById("out-spend-other");
     var heroBalanceEl = document.querySelector(".hero-balance");
     var spendStructureEl = document.getElementById("spend-structure");
+    var dailyTbody = document.getElementById("daily-tbody");
+    var dailyMsg = document.getElementById("daily-msg");
+    var outDailyResultsLine = document.getElementById("out-daily-results-line");
 
     /**
      * Возвращает текущую тему: "light" или "dark".
@@ -1026,6 +1233,179 @@
         minimumFractionDigits: 0,
         maximumFractionDigits: 2
       }) + " ₽";
+    }
+
+    /* --- Ежедневные расходы: localStorage + таблица; сумма входит в общие расходы при расчёте --- */
+    var DAILY_LS_KEY = "family-budget-daily-expenses";
+
+    function loadDailyList() {
+      try {
+        var raw = localStorage.getItem(DAILY_LS_KEY);
+        if (!raw) return [];
+        var arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return [];
+        return arr
+          .map(function (r) {
+            var a = parseFloat(r.amount);
+            return {
+              id: String(r.id != null ? r.id : ""),
+              date: String(r.date || ""),
+              category: String(r.category || "").trim(),
+              amount: isNaN(a) || a < 0 ? 0 : a,
+              comment: String(r.comment != null ? r.comment : "")
+            };
+          })
+          .filter(function (r) {
+            return r.id.length > 0;
+          });
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function saveDailyList(list) {
+      try {
+        localStorage.setItem(DAILY_LS_KEY, JSON.stringify(list));
+      } catch (e) {
+        /* нет места или запрет записи */
+      }
+    }
+
+    function getDailyExpensesSum() {
+      return loadDailyList().reduce(function (s, r) {
+        return s + r.amount;
+      }, 0);
+    }
+
+    function genDailyId() {
+      return "d" + Date.now() + "-" + Math.random().toString(36).slice(2, 10);
+    }
+
+    function formatDisplayDate(iso) {
+      if (!iso || String(iso).length < 8) return iso ? String(iso) : "—";
+      var parts = String(iso).split("-");
+      if (parts.length !== 3) return String(iso);
+      return parts[2] + "." + parts[1] + "." + parts[0];
+    }
+
+    function updateDailyTotalsDisplay() {
+      var s = getDailyExpensesSum();
+      var line = "Расходы по ежедневным записям: " + formatMoney(s);
+      var inline = document.getElementById("daily-inline-total");
+      if (inline) inline.textContent = line;
+      if (outDailyResultsLine) outDailyResultsLine.textContent = line;
+    }
+
+    function renderDailyTable() {
+      if (!dailyTbody) return;
+      var list = loadDailyList().slice();
+      list.sort(function (a, b) {
+        if (a.date !== b.date) return String(b.date).localeCompare(String(a.date));
+        return String(b.id).localeCompare(String(a.id));
+      });
+      dailyTbody.innerHTML = "";
+      for (var i = 0; i < list.length; i++) {
+        var row = list[i];
+        var tr = document.createElement("tr");
+        var tdDate = document.createElement("td");
+        tdDate.textContent = formatDisplayDate(row.date);
+        tr.appendChild(tdDate);
+        var tdCat = document.createElement("td");
+        tdCat.textContent = row.category || "—";
+        tr.appendChild(tdCat);
+        var tdAmt = document.createElement("td");
+        tdAmt.className = "daily-col-amount";
+        tdAmt.textContent = formatMoney(row.amount);
+        tr.appendChild(tdAmt);
+        var tdCom = document.createElement("td");
+        tdCom.className = "daily-col-comment";
+        tdCom.textContent = row.comment || "—";
+        tr.appendChild(tdCom);
+        var tdDel = document.createElement("td");
+        var delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "daily-btn-delete";
+        delBtn.textContent = "Удалить";
+        delBtn.setAttribute("aria-label", "Удалить запись");
+        delBtn.dataset.id = row.id;
+        tdDel.appendChild(delBtn);
+        tr.appendChild(tdDel);
+        dailyTbody.appendChild(tr);
+      }
+    }
+
+    function showDailyMsg(text) {
+      if (dailyMsg) dailyMsg.textContent = text || "";
+    }
+
+    function initDailyExpensesUI() {
+      var dateInput = document.getElementById("daily-date");
+      if (dateInput && !dateInput.value) {
+        var t = new Date();
+        var y = t.getFullYear();
+        var m = t.getMonth() + 1;
+        var d = t.getDate();
+        dateInput.value =
+          y + "-" + (m < 10 ? "0" : "") + m + "-" + (d < 10 ? "0" : "") + d;
+      }
+      renderDailyTable();
+      updateDailyTotalsDisplay();
+    }
+
+    function handleDailyAdd() {
+      showDailyMsg("");
+      var dateEl = document.getElementById("daily-date");
+      var catEl = document.getElementById("daily-category");
+      var amtEl = document.getElementById("daily-amount");
+      var comEl = document.getElementById("daily-comment");
+      if (!dateEl || !catEl || !amtEl) return;
+      var dateVal = dateEl.value;
+      var catVal = (catEl.value || "").trim();
+      var amtVal = parseFloat(amtEl.value);
+      if (!dateVal) {
+        showDailyMsg("Укажите дату.");
+        return;
+      }
+      if (!catVal) {
+        showDailyMsg("Укажите категорию расхода.");
+        return;
+      }
+      if (isNaN(amtVal) || amtVal <= 0) {
+        showDailyMsg("Введите сумму больше нуля.");
+        return;
+      }
+      var list = loadDailyList();
+      list.push({
+        id: genDailyId(),
+        date: dateVal,
+        category: catVal,
+        amount: amtVal,
+        comment: comEl && comEl.value ? comEl.value.trim() : ""
+      });
+      saveDailyList(list);
+      amtEl.value = "";
+      if (comEl) comEl.value = "";
+      renderDailyTable();
+      updateDailyTotalsDisplay();
+      if (resultsEl && resultsEl.classList.contains("visible")) {
+        calculateBudget(null);
+      }
+    }
+
+    function handleDailyTableClick(ev) {
+      var t = ev.target;
+      if (!t || t.nodeName !== "BUTTON" || !t.classList.contains("daily-btn-delete")) return;
+      var id = t.dataset.id;
+      if (!id) return;
+      var list = loadDailyList().filter(function (r) {
+        return r.id !== id;
+      });
+      saveDailyList(list);
+      renderDailyTable();
+      updateDailyTotalsDisplay();
+      if (resultsEl && resultsEl.classList.contains("visible")) {
+        calculateBudget(null);
+      }
     }
 
     /**
@@ -1149,13 +1529,16 @@
       var fun = readNumber("fun");
       var other = readNumber("other");
 
+      var dailySum = getDailyExpensesSum();
+
       var totalExpenses =
-        food + utilities + transport + comm + credits + kids + health + fun + other;
+        food + utilities + transport + comm + credits + kids + health + fun + other + dailySum;
 
       var sumMandatory = utilities + credits + comm;
       var sumHousehold = food + transport;
       var sumPersonal = kids + health + fun;
-      var sumOtherGroup = other;
+      /* Ежедневные траты отражаем в группе «Прочие», чтобы сумма групп совпадала с общими расходами */
+      var sumOtherGroup = other + dailySum;
 
       // Остаток = доходы минус расходы
       var remainder = totalIncome - totalExpenses;
@@ -1197,6 +1580,8 @@
       // Структура расходов по группам
       updateExpenseStructure(sumMandatory, sumHousehold, sumPersonal, sumOtherGroup);
 
+      updateDailyTotalsDisplay();
+
       /* Показ блока «Остаток за месяц» и «Структура расходов» только после расчёта */
       if (heroBalanceEl) heroBalanceEl.classList.add("result-shown");
       if (spendStructureEl) spendStructureEl.classList.add("result-shown");
@@ -1237,6 +1622,12 @@
 
     // Кнопка «Очистить»
     btnClear.addEventListener("click", clearForm);
+
+    /* Ежедневные расходы */
+    var btnDailyAdd = document.getElementById("btn-daily-add");
+    if (btnDailyAdd) btnDailyAdd.addEventListener("click", handleDailyAdd);
+    if (dailyTbody) dailyTbody.addEventListener("click", handleDailyTableClick);
+    initDailyExpensesUI();
   </script>
 </body>
 </html>
